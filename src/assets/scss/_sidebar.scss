@@ -1,0 +1,54 @@
+#sidebar {
+  background-color: rgb(255, 255, 255);
+  box-shadow: 7px 0px 10px rgba(182, 182, 182, 0.5);
+}
+@mixin flex() {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  flex-direction: column;
+}
+
+@mixin hoverEffect() {
+  border-left: 3px solid rgb(37, 113, 255);
+  color: #333;
+  background-color: rgba(85, 144, 255, 0.1);
+}
+
+#icon_head {
+  width: 70px;
+  height: 70px;
+  @include flex();
+  #icon_main {
+    font-size: 35px;
+  }
+}
+#icons_group {
+  width: 70px;
+  @include flex();
+
+  .icon_wrapper {
+    height: 70px;
+    width: 70px;
+    @include flex();
+    color: rgb(158, 158, 158);
+
+    .icons_link {
+      font-size: 25px;
+    }
+    .icon_name {
+      font-size: 10px;
+      text-transform: capitalize;
+    }
+
+    &:hover,
+    &:focus,
+    &:active {
+      @include hoverEffect();
+    }
+  }
+
+  .link_btn:focus {
+    @include hoverEffect();
+  }
+}
