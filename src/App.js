@@ -11,15 +11,19 @@ const App = () => {
   return (
     <Router>
       <Container fluid className="g-0" id="main_container">
+        {/* side bar */}
         <div className="sidebar" id="sidebar">
           <Sidebar />
         </div>
+        {/* side bar */}
+        {/* main body */}
         <div className="body" id="body">
           <Header />
           <Route path="/userPage" component={User} />
           <Route path="/planningPage" component={PlanningPage} />
           <Route path="/settingsPage" component={Settings} />
         </div>
+        {/* main body */}
       </Container>
     </Router>
   );
