@@ -3,19 +3,27 @@ import NewPlayerSeachTable from "./newPlayerTable";
 import { connect } from "react-redux";
 import { setSidebarTabs } from "../sidebar/sidebarSlice";
 import { Link } from "react-router-dom";
+import { CSVLink } from "react-csv";
+import jsPDF from "jspdf";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { brandsData, currencyData, countryData } from "./newPlayerData";
 import {
   getNewPlayer,
   setPaginationFirstValue,
-  setPaginationSecondValue,
   setActivePage,
 } from "./NewPlayerSlice";
+import {
+  brandsData,
+  currencyData,
+  countryData,
+  inputFieldsData,
+  paginationData,
+  itemsToDisplay,
+} from "./newPlayerData";
 class newPlayer extends React.Component {
   constructor(props) {
     super(props);
-    this.closeBrandDropdown = React.createRef();
+    this.dropDownClose = React.createRef();
     this.state = {
       username: "",
       firstName: "",
@@ -36,8 +44,21 @@ class newPlayer extends React.Component {
       data: {},
       open: false,
       pageNumber: this.props.paginationFirstValue,
-      isActive: "1",
-      brandNames: [],
+      isActive: ["1"],
+      brandsList: ["test"],
+      document: "",
+      people: [
+        { name: "Keanu Reeves", profession: "Actor" },
+        { name: "Lionel Messi", profession: "Football Player" },
+        { name: "Cristiano Ronaldo", profession: "Football Player" },
+        { name: "Jack Nicklaus", profession: "Golf Player" },
+      ],
+      dummydata: [
+        { name: "Keanu Reeves", profession: "Actor" },
+        { name: "Lionel Messi", profession: "Football Player" },
+        { name: "Cristiano Ronaldo", profession: "Football Player" },
+        { name: "Jack Nicklaus", profession: "Golf Player" },
+      ],
     };
     this.onChangeRegistrationFromDate =
       this.onChangeRegistrationFromDate.bind(this);
@@ -49,7 +70,11 @@ class newPlayer extends React.Component {
     this.setPageNumber = this.setPageNumber.bind(this);
     this.setNextPageValue = this.setNextPageValue.bind(this);
     this.setBeforePageValue = this.setBeforePageValue.bind(this);
-    this.setItemsPerPage = this.setItemsPerPage.bind(this);
+    this.setFirstPage = this.setFirstPage.bind(this);
+    this.setLastPage = this.setLastPage.bind(this);
+    this.setItemsToDisplay = this.setItemsToDisplay.bind(this);
+    this.myDocument = this.myDocument.bind(this);
+    this.exportPDF = this.exportPDF.bind(this);
     this.handleClickOutside = this.handleClickOutside.bind(this);
   }
 
@@ -64,71 +89,97 @@ class newPlayer extends React.Component {
   }
 
   brandHandler = (e) => {
-    this.setState({
-      brand: e.target.value,
-    });
-    this.state.brandNames.push(e.target.value);
+    this.setState({ brand: e.target.value });
+    this.state.brandsList.push(e.target.value);
     this.setState({ open: false });
-    console.log(this.state.brandNames);
   };
 
   handleClickDropdown = () => {
     this.setState({ open: !this.state.open });
   };
 
-  // pagination functions //
-  callAPi(firstValue) {
-    this.props.dispatch(
-      getNewPlayer(firstValue, this.props.paginationSecondValue, {})
-    );
-  }
-  setPageNumber(e) {
-    if (e.target.name == 1 || 2 || 3) {
-      this.props.dispatch(setPaginationFirstValue(+e.target.name));
-      this.props.dispatch(setActivePage(["none", e.target.name]));
-      this.callAPi(+e.target.name);
-    } else if (e.target.name == "first") {
-      this.props.dispatch(setPaginationFirstValue(1));
-      this.props.dispatch(setActivePage(["first", "first"]));
-      this.props.dispatch(
-        getNewPlayer(
-          this.props.paginationFirstValue,
-          this.props.paginationSecondValue,
-          {}
-        )
-      );
-    }
+  exportPDF() {
+    const unit = "pt";
+    const size = "A4";
+    const orientation = "portrait";
+
+    const marginLeft = 40;
+    const doc = new jsPDF(orientation, unit, size);
+
+    doc.setFontSize(15);
+
+    const title = "My Awesome Report";
+    const headers = [["NAME", "PROFESSION"]];
+
+    const data = this.state.people.map((elt) => [elt.name, elt.profession]);
+
+    let content = {
+      startY: 50,
+      head: headers,
+      body: data,
+    };
+
+    doc.text(title, marginLeft, 40);
+    //  doc.autoTable(content);
+    doc.save("report.pdf");
   }
 
-  setNextPageValue = () => {
+  myDocument(e) {
+    this.setState({ document: e.target.value });
+  }
+
+  // pagination functions //
+
+  callAPi(value) {
+    this.props.dispatch(
+      getNewPlayer(value, this.props.paginationSecondValue, {})
+    );
+  }
+  setFirstPage = () => {
+    this.props.dispatch(setPaginationFirstValue(1));
+    this.props.dispatch(setActivePage(["1", "firstPage"]));
+    this.callAPi(1);
+  };
+  setLastPage = () => {};
+  setPageNumber(e) {
+    this.props.dispatch(setPaginationFirstValue(Number(e.target.name)));
+    this.props.dispatch(setActivePage([e.target.name, "none"]));
+    this.callAPi(this.props.paginationFirstValue);
+  }
+  setNextPageValue() {
     this.props.dispatch(
       setPaginationFirstValue(this.props.paginationFirstValue + 1)
     );
     this.props.dispatch(
-      setActivePage([this.props.paginationFirstValue, "next"])
+      setActivePage([
+        (this.props.paginationFirstValue + 1).toString(),
+        "nextPage",
+      ])
     );
     this.callAPi(this.props.paginationFirstValue);
-  };
+  }
+
   setBeforePageValue() {
-    if (this.props.paginationFirstValue > 0) {
+    if (this.props.paginationFirstValue > 1) {
       this.props.dispatch(
         setPaginationFirstValue(this.props.paginationFirstValue - 1)
       );
       this.props.dispatch(
-        setActivePage([this.props.paginationFirstValue, "before"])
+        setActivePage([
+          (this.props.paginationFirstValue - 1).toString(),
+          "previousPage",
+        ])
       );
       this.callAPi(this.props.paginationFirstValue);
     }
   }
   // pagination functions //
 
-  setItemsPerPage(e) {
-    this.props.dispatch(setPaginationSecondValue(e.target.value));
+  setItemsToDisplay = (e) => {
     this.props.dispatch(
       getNewPlayer(this.props.paginationFirstValue, e.target.value, {})
     );
-  }
-
+  };
   onFormSubmit(e) {
     e.preventDefault();
   }
@@ -147,8 +198,7 @@ class newPlayer extends React.Component {
       currency: "",
     });
     this.setState({ data: {} });
-    this.setState({ brandNames: [] });
-    this.props.dispatch(setPaginationSecondValue(15));
+    this.setState({ brandsList: [] });
   }
 
   onSubmit(e) {
@@ -165,7 +215,7 @@ class newPlayer extends React.Component {
         affiliateName: this.state.affiliateName,
         firstName: this.state.firstName,
         lastName: this.state.lastName,
-        brandsList: this.state.brandNames,
+        brandsList: this.state.brandsList,
       },
     });
     let newPlayerData = {
@@ -198,30 +248,21 @@ class newPlayer extends React.Component {
       this.props.history.push("/dashboard");
     }
   }
-
   handleClickOutside(e) {
     if (
-      this.closeBrandDropdown.current &&
-      !this.closeBrandDropdown.current.contains(e.target)
+      this.dropDownClose.current &&
+      !this.dropDownClose.current.contains(e.target)
     ) {
       this.setState({ open: false });
     }
   }
-
   componentDidMount() {
     document.addEventListener("mousedown", this.handleClickOutside);
-    this.props.dispatch(
-      setPaginationFirstValue(this.props.paginationFirstValue)
-    );
-    this.props.dispatch(
-      setPaginationSecondValue(this.props.paginationSecondValue)
-    );
   }
   componentWillUnmount() {
     document.removeEventListener("mousedown", this.handleClickOutside);
   }
   render() {
-    console.log("isActive", this.props.activePage);
     return (
       <>
         <div className="CMS-page CMS-newPlayer">
@@ -253,6 +294,7 @@ class newPlayer extends React.Component {
                     })}
                 </ul>
               </div>
+
               <form>
                 <div className="CMS-tabs-content">
                   <div className="CMS-tab-panel active" id="CMS-betting">
@@ -267,7 +309,7 @@ class newPlayer extends React.Component {
                                   "CMS-dropdown CMS-brands-dropdown CMS-formControl" +
                                   `${this.state.open ? " active" : ""}`
                                 }
-                                ref={this.closeBrandDropdown}
+                                ref={this.dropDownClose}
                               >
                                 <div
                                   className="CMS-dropdown-btn"
@@ -278,21 +320,21 @@ class newPlayer extends React.Component {
                                     : "Select"}
                                 </div>
                                 <div className="CMS-dropdown-menu CMS-form-group">
-                                  {brandsData.map((item, index) => {
+                                  {brandsData.map((cur, ind) => {
                                     return (
                                       <div
                                         className="CMS-checkbox"
-                                        key={item.id}
+                                        key={cur.id}
                                       >
                                         <input
-                                          id={item.id}
+                                          id={cur.id}
                                           type="checkbox"
-                                          value={item.value}
+                                          value={cur.value}
                                           onClick={this.brandHandler}
                                         />
-                                        <label htmlFor={item.id}></label>
+                                        <label htmlFor={cur.id}></label>
                                         <span className="SB-checkboxLabel">
-                                          {item.value}
+                                          {cur.value}
                                         </span>
                                       </div>
                                     );
@@ -314,10 +356,10 @@ class newPlayer extends React.Component {
                                     onChange={this.onChangeHandler}
                                   >
                                     <option value="">Select</option>
-                                    {currencyData.map((item, index) => {
+                                    {currencyData.map((cur, ind) => {
                                       return (
-                                        <option key={item.id} value={item.name}>
-                                          {item.name}
+                                        <option key={cur.id} value={cur.name}>
+                                          {cur.name}
                                         </option>
                                       );
                                     })}
@@ -337,13 +379,10 @@ class newPlayer extends React.Component {
                                     onChange={this.onChangeHandler}
                                   >
                                     <option>Select</option>
-                                    {countryData.map((country, ind) => {
+                                    {countryData.map((cur, ind) => {
                                       return (
-                                        <option
-                                          key={country.id}
-                                          value={country.name}
-                                        >
-                                          {country.name}
+                                        <option key={cur.id} value={cur.name}>
+                                          {cur.name}
                                         </option>
                                       );
                                     })}
@@ -386,9 +425,6 @@ class newPlayer extends React.Component {
                                       }
                                       name="FromDate"
                                       dateFormat="dd-MM-yyyy"
-                                      showMonthDropdown
-                                      showYearDropdown
-                                      dropdownMode="select"
                                       placeholderText="01-01-2022"
                                     />
                                   </div>
@@ -415,9 +451,6 @@ class newPlayer extends React.Component {
                                       onChange={this.onChangeRegistrationToDate}
                                       name="ToDate"
                                       dateFormat="dd-MM-yyyy"
-                                      showMonthDropdown
-                                      showYearDropdown
-                                      dropdownMode="select"
                                       placeholderText="31-12-2030"
                                     />
                                   </div>
@@ -431,67 +464,32 @@ class newPlayer extends React.Component {
                               </div>
                             </div>
                           </div>
-                          <div className="col-3">
-                            <div className="CMS-formGroup">
-                              <div className="CMS-formLabel">
-                                Affiliate BTAG
+                          {inputFieldsData.map((item, ind) => {
+                            const values = [
+                              this.state.affiliateBTAG,
+                              this.state.affiliateName,
+                              this.state.firstName,
+                              this.state.lastName,
+                            ];
+                            return (
+                              <div className="col-3" key={item.name}>
+                                <div className="CMS-formGroup">
+                                  <div className="CMS-formLabel">
+                                    {item.class}
+                                  </div>
+                                  <div className="CMS-formControl">
+                                    <input
+                                      type="text"
+                                      name={item.name}
+                                      placeholder={item.class}
+                                      value={values[ind]}
+                                      onChange={this.onChangeHandler}
+                                    />
+                                  </div>
+                                </div>
                               </div>
-                              <div className="CMS-formControl">
-                                <input
-                                  type="text"
-                                  name="affiliateBTAG"
-                                  placeholder="Affiliate BTAG"
-                                  value={this.state.affiliateBTAG}
-                                  onChange={this.onChangeHandler}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-3">
-                            <div className="CMS-formGroup">
-                              <div className="CMS-formLabel">
-                                Affiliate Name
-                              </div>
-                              <div className="CMS-formControl">
-                                <input
-                                  type="text"
-                                  id=""
-                                  name="affiliateName"
-                                  placeholder="Affiliate Name"
-                                  value={this.state.affiliateName}
-                                  onChange={this.onChangeHandler}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-3">
-                            <div className="CMS-formGroup">
-                              <div className="CMS-formLabel">First Name</div>
-                              <div className="CMS-formControl">
-                                <input
-                                  type="text"
-                                  name="firstName"
-                                  placeholder="First Name"
-                                  onChange={this.onChangeHandler}
-                                  value={this.state.firstName}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-3">
-                            <div className="CMS-formGroup">
-                              <div className="CMS-formLabel">Last Name</div>
-                              <div className="CMS-formControl">
-                                <input
-                                  type="text"
-                                  placeholder="Last Name"
-                                  name="lastName"
-                                  value={this.state.lastName}
-                                  onChange={this.onChangeHandler}
-                                />
-                              </div>
-                            </div>
-                          </div>
+                            );
+                          })}
                         </div>
                         <div className="mt-20"></div>
 
@@ -521,117 +519,42 @@ class newPlayer extends React.Component {
                           <div className="CMS-pagination-container">
                             <div className="CMS-pagination-list">
                               <ul>
-                                <li>
-                                  <a
-                                    href="#"
-                                    name="first"
-                                    className={
-                                      this.props.activePage.includes("first")
-                                        ? "active"
-                                        : ""
-                                    }
-                                    onClick={this.setPageNumber}
-                                  >
-                                    <span
-                                      className="material-icons"
-                                      data-icon="first_page"
-                                    ></span>
-                                  </a>
-                                </li>
-                                <li>
-                                  <a
-                                    href="#"
-                                    name="before"
-                                    className={
-                                      this.props.activePage.includes("before")
-                                        ? "active"
-                                        : ""
-                                    }
-                                    onClick={this.setBeforePageValue}
-                                  >
-                                    <span
-                                      className="material-icons"
-                                      data-icon="navigate_before"
-                                    ></span>
-                                  </a>
-                                </li>
-                                <li>
-                                  <a
-                                    className="active"
-                                    href="#"
-                                    name={1}
-                                    className={
-                                      this.props.activePage.includes("1")
-                                        ? "active"
-                                        : ""
-                                    }
-                                    onClick={this.setPageNumber}
-                                  >
-                                    1
-                                  </a>
-                                </li>
-                                <li>
-                                  <a
-                                    href="#"
-                                    name={2}
-                                    className={
-                                      this.props.activePage.includes("2")
-                                        ? "active"
-                                        : ""
-                                    }
-                                    onClick={this.setPageNumber}
-                                  >
-                                    2
-                                  </a>
-                                </li>
-                                <li>
-                                  <a
-                                    href="#"
-                                    name={3}
-                                    className={
-                                      this.props.activePage.includes("3")
-                                        ? "active"
-                                        : ""
-                                    }
-                                    onClick={this.setPageNumber}
-                                  >
-                                    3
-                                  </a>
-                                </li>
-                                <li>
-                                  <a
-                                    href="#"
-                                    name="nextPage"
-                                    className={
-                                      this.props.activePage.includes("next")
-                                        ? "active"
-                                        : ""
-                                    }
-                                    onClick={this.setNextPageValue}
-                                  >
-                                    <span
-                                      className="material-icons"
-                                      data-icon="navigate_next"
-                                    ></span>
-                                  </a>
-                                </li>
-                                <li>
-                                  <a
-                                    href="#"
-                                    name="last"
-                                    className={
-                                      this.props.activePage == "last"
-                                        ? "active"
-                                        : ""
-                                    }
-                                    onClick={this.setPageNumber}
-                                  >
-                                    <span
-                                      className="material-icons"
-                                      data-icon="last_page"
-                                    ></span>
-                                  </a>
-                                </li>
+                                {paginationData.map((page, ind) => {
+                                  const handler = [
+                                    this.setFirstPage,
+                                    this.setBeforePageValue,
+                                    this.setPageNumber,
+                                    this.setPageNumber,
+                                    this.setPageNumber,
+                                    this.setNextPageValue,
+                                    this.setLastPage,
+                                  ];
+                                  return (
+                                    <li key={page.id}>
+                                      <a
+                                        href="#"
+                                        className={
+                                          this.props.activePage.includes(
+                                            page.name
+                                          )
+                                            ? "active"
+                                            : ""
+                                        }
+                                        name={page.name}
+                                        onClick={handler[ind]}
+                                      >
+                                        {page.name.length > 2 ? (
+                                          <span
+                                            className="material-icons"
+                                            data-icon={page.icon}
+                                          ></span>
+                                        ) : (
+                                          page.name
+                                        )}
+                                      </a>
+                                    </li>
+                                  );
+                                })}
                               </ul>
                             </div>
 
@@ -640,30 +563,52 @@ class newPlayer extends React.Component {
                                 <select
                                   id="country"
                                   name="File"
-                                  onChange={this.setItemsPerPage}
+                                  onChange={this.setItemsToDisplay}
                                 >
-                                  <option value={15}>select No </option>
-                                  <option value={25}>25</option>
-                                  <option value={50}>50</option>
-                                  <option value={100}>100</option>
-                                  <option value={200}>200</option>
-                                  <option value={500}>500</option>
+                                  {itemsToDisplay.map((cur, ind) => {
+                                    return (
+                                      <option value={cur.value} key={cur.id}>
+                                        {cur.value}
+                                      </option>
+                                    );
+                                  })}
                                 </select>
                               </div>
                               <div className="CMS-file-type CMS-select">
-                                <select id="country" name="File">
+                                <select
+                                  id="country"
+                                  name="File"
+                                  onChange={this.myDocument}
+                                >
                                   <option value="PDF">PDF</option>
                                   <option value="CSV">CSV</option>
-                                  <option value="XLS">XLS</option>
+                                  {/* <option value="XLS">XLS</option> */}
                                 </select>
                               </div>
                               <div className="CMS-download-icon">
-                                <a href="#">
-                                  <span
-                                    className="material-icons"
-                                    data-icon="file_download"
-                                  ></span>
-                                </a>
+                                {this.state.document === "CSV" ? (
+                                  <CSVLink
+                                    style={{ textDecoration: "none" }}
+                                    data={this.state.dummydata}
+                                    // I also tried adding the onClick event on the link itself
+                                    filename={"my-file.csv"}
+                                    target="_blank"
+                                  >
+                                    <a>
+                                      <span
+                                        className="material-icons"
+                                        data-icon="file_download"
+                                      ></span>
+                                    </a>
+                                  </CSVLink>
+                                ) : (
+                                  <a onClick={() => this.exportPDF()}>
+                                    <span
+                                      className="material-icons"
+                                      data-icon="file_download"
+                                    ></span>
+                                  </a>
+                                )}
                               </div>
                             </div>
 

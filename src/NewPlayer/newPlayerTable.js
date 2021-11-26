@@ -10,6 +10,7 @@ class NewPlayerSeachTable extends React.Component {
   }
 
   render() {
+    console.log("brands list :", this.props.SearchData);
     return (
       <>
         <div className="CMS-box CMS-table CMS-table-triped">
